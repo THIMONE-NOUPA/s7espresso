@@ -1,0 +1,129 @@
+apiVersion: v1
+
+kind: PersistentVolumeClaim
+
+metadata:
+
+  name: pgdata
+
+spec:
+
+  accessModes:
+
+    - ReadWriteOnce
+
+  resources:
+
+    requests:
+
+      storage: 5Gi
+
+
+
+---
+
+apiVersion: v1
+
+kind: Service
+
+metadata:
+
+  name: postgres
+
+spec:
+
+  ports:
+
+    - port: 5432
+
+      name: postgres
+
+  clusterIP: None
+
+  selector:
+
+    pop: postgres 
+
+
+
+
+
+---
+
+apiVersion: apps/v1
+
+kind: StatefulSet
+
+metadata:
+
+  name: postgres
+
+spec:
+
+  serviceName: postgres
+
+  replicas: 3
+
+  selector:
+
+    matchLabels:
+
+      pop: postgres
+
+  template:
+
+    metadata:
+
+      labels:
+
+        pop: postgres
+
+    spec:
+
+      containers:
+
+        - name: postgres
+
+          image: postgres
+
+          ports:
+
+            - containerPort: 5432
+
+          env:
+
+            - name: POSTGRES_USER
+
+              value: postgres
+
+            - name: POSTGRES_PASSWORD
+
+              value: mysecretpassword
+
+            - name: POSTGRES_DB
+
+              value: mydatabase
+
+          volumeMounts:
+
+            - name: pgdata
+
+              mountPath: /var/lib/postgresql/data
+
+  volumeClaimTemplates:
+
+    - metadata:
+
+        name: pgdata
+
+      spec:
+
+        accessModes: [ "ReadWriteOnce" ]
+
+        resources:
+
+          requests:
+
+            storage: 5Gi
+
+

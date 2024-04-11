@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: espresso-reviews2-configmap
+data:
+  SERVICE_VERSION: "v2"
+
+---
+#apiVersion: v1
+#kind: Secret
+#metadata:
+  #name: espresso-reviews2-secret
+#type: Opaque
+#data:
+  #username: dGVzdHVzZXI=
+  #password: cGFzc3dvcmQ=
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: espresso-reviews2-sa
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: espressoreviews2-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: shop-reviews2
+  template:
+    metadata:
+      labels:
+        app: shop-reviews2
+        version: v2
+      
+    spec:
+      serviceAccountName: espresso-reviews2-sa
+      containers:
+      - name: espressoreviews2
+        image: thimone/s7thimone:espressoreviews-v1.0.0
+        ports:
+        - containerPort: 80
+        envFrom:
+        - configMapRef:
+            name: espresso-reviews2-configmap
+        #volumeMounts:
+        #- name: secret-volume
+         # mountPath: /etc/secret
+      #volumes:
+      #- name: secret-volume
+        #secret:
+          #secretName: espresso-reviews2-secret
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: espresso-shop-reviews-svc
+spec:
+  selector:
+    #version: v1
+    app: shop-reviews2 
+  ports:
+    - protocol: TCP
+      port: 8092  # Service port
+      targetPort: 80  # Container port
+  type: ClusterIP
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: espressoreviews2-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: shop-reviews2
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: espressoreviews2-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: espressoreviews2-deployment
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
